@@ -103,3 +103,59 @@ class GoogleSheetsManager:
     def copy_to(self, cell: str, target_cell: str):
         value = self.get_cell(cell)
         self.update_cell(target_cell, value)
+
+    # ========================================================== #
+    # DATA BASE MANAGEMENT
+    # ========================================================== #
+    def db_get_headers(self) -> List[str]:
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+        
+        # Assuming headers are in the first row
+        headers = self._worksheet.row_values(1)
+        return headers
+    def db_add_header(self, header: str):
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+        headers = self.db_get_headers()
+        if header in headers:
+            raise ValueError(f"Header '{header}' already exists.")
+        else:
+            headers.append(header)
+            self._worksheet.update('A1', [headers])
+    def db_add_headers(self, headers: List[str]):
+        """Add multiple headers to the database"""
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+        
+        for header in headers:
+            self.db_add_header(header)
+    def db_create(self, headers: Optional[List[str]] = None):
+        """Create a new database with the specified headers, clearing the actual sheet and adding ID by default"""
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+
+        self.clear()
+        self.db_add_header("ID")  # Always add an ID header
+        if headers:
+            for header in headers:
+                self.db_add_header(header)  
+    def db_add_value(self, values: List[Union[str, int, float]]):
+        """Add a new row of values to the database"""
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+        
+        headers = self.db_get_headers()
+        if len(values) != len(headers) - 1:  # Exclude ID header
+            raise ValueError(f"Expected {len(headers) - 1} values, got {len(values)}")
+        else:
+            next_row = len(self._worksheet.get_all_values()) + 1
+            values.insert(0, next_row - 1)
+            self._worksheet.append_row(values)
+    def db_get_all_values(self) -> List[List[Union[str, int, float]]]:
+        """Get all values from the database, including the ID column but excluding headers"""
+        if self._worksheet is None:
+            raise ValueError("No worksheet set. Use set_sheet() to select a worksheet.")
+        
+        all_values = self._worksheet.get_all_values()
+        return all_values[1:]
